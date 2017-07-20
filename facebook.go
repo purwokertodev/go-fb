@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	GRAPH_BASE_URL = "https://graph.facebook.com"
+	GRAPH_BASE_URL = "https://graph."
 )
 
 type Facebook struct {
@@ -33,11 +33,13 @@ func NewFacebook(appId string, appSecret string, version string, beta bool, time
 func (f *Facebook) GetAppAccessToken() (*AccessTokenApp, error) {
 	client := &http.Client{}
 	var accessTokenApp *AccessTokenApp
-
-	uri := GRAPH_BASE_URL + "/" + f.version + "/oauth/access_token?client_id=" + f.appId + "&client_secret=" + f.appSecret + "&grant_type=client_credentials"
+	var betaApp string
+	if f.beta {
+		betaApp = "beta."
+	}
+	uri := GRAPH_BASE_URL +betaApp+ "facebook.com/" + f.version + "/oauth/access_token?client_id=" + f.appId + "&client_secret=" + f.appSecret + "&grant_type=client_credentials"
 	response, err := client.Get(uri)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
