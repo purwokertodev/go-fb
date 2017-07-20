@@ -3,11 +3,12 @@ package fb
 import (
 	"net/http"
 	"time"
-	"io/ioutil"
+	"encoding/json"
 	"errors"
+	"fmt"
 )
 
-const(
+const (
 	GRAPH_BASE_URL = "https://graph.facebook.com"
 )
 
@@ -16,7 +17,7 @@ type Facebook struct {
 	appSecret string
 	version   string
 	beta      bool
-	timeout	time.Duration
+	timeout   time.Duration
 }
 
 func NewFacebook(appId string, appSecret string, version string, beta bool, timeout time.Duration) *Facebook {
@@ -25,20 +26,18 @@ func NewFacebook(appId string, appSecret string, version string, beta bool, time
 		appSecret: appSecret,
 		version:   version,
 		beta:      beta,
-		timeout: timeout,
+		timeout:   timeout,
 	}
 }
 
-//https://graph.facebook.com/v2.10/me?fields=id,name,picture{height,is_silhouette,url,width}&access_token=spsB4NEZD
+func (f *Facebook) GetAppAccessToken() (*AccessTokenApp, error) {
+	client := &http.Client{}
+	var accessTokenApp *AccessTokenApp
 
-func (f *Facebook) GetAppAccessToken() (interface{}, error) {
-	client := &http.Client{
-		Timeout: f.timeout,
-	}
-
-	uri := GRAPH_BASE_URL+"/"+f.version+"/oauth/access_token?client_id="+f.appId+"&client_secret="+f.appSecret+"&grant_type=client_credentials"
+	uri := GRAPH_BASE_URL + "/" + f.version + "/oauth/access_token?client_id=" + f.appId + "&client_secret=" + f.appSecret + "&grant_type=client_credentials"
 	response, err := client.Get(uri)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 
@@ -48,17 +47,10 @@ func (f *Facebook) GetAppAccessToken() (interface{}, error) {
 		return nil, errors.New("Error response")
 	}
 
-	bodyBytes, err := ioutil.ReadAll(response.Body)
+	err = json.NewDecoder(response.Body).Decode(&accessTokenApp)
 	if response.StatusCode != http.StatusOK {
 		return nil, errors.New("Error response")
 	}
-	bodyString := string(bodyBytes)
 
-	///oauth/access_token?client_id={app-id}&client_secret={app-secret}&grant_type=client_credentials
-
-	return struct{
-		AccessToken string
-	}{
-		AccessToken: bodyString,
-	}, nil
+	return accessTokenApp, nil
 }
