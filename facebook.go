@@ -1,6 +1,9 @@
 package fb
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -8,7 +11,8 @@ import (
 )
 
 const (
-	GRAPH_BASE_URL = "https://graph."
+	GRAPH_BASE_URL         = "https://graph."
+	BASE_AUTHORIZATION_URL = "https://www.facebook.com"
 )
 
 type Facebook struct {
@@ -29,6 +33,8 @@ func NewFacebook(appId string, appSecret string, version string, beta bool, time
 	}
 }
 
+//Generate Application Access Token
+//retun struct of AccessTokenApp
 func (f *Facebook) GetAppAccessToken() (*AccessTokenApp, error) {
 	client := &http.Client{}
 	var accessTokenApp *AccessTokenApp
@@ -54,4 +60,13 @@ func (f *Facebook) GetAppAccessToken() (*AccessTokenApp, error) {
 	}
 
 	return accessTokenApp, nil
+}
+
+//Generate an app secret proof to sign a request to Graph.
+//return string
+func (f *Facebook) GetSecretProof(accessToken string) string {
+	key := []byte(f.appSecret)
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(accessToken))
+	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
