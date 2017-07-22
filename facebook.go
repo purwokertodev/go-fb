@@ -19,16 +19,18 @@ const (
 type Facebook struct {
 	appId       string
 	appSecret   string
+	accessToken string
 	version     string
 	redirectUrl string
 	beta        bool
 	timeout     time.Duration
 }
 
-func NewFacebook(appId string, appSecret string, version string, redirectUrl string, beta bool, timeout time.Duration) *Facebook {
+func NewFacebook(appId string, appSecret string, accessToken string, version string, redirectUrl string, beta bool, timeout time.Duration) *Facebook {
 	return &Facebook{
 		appId:       appId,
 		appSecret:   appSecret,
+		accessToken: accessToken,
 		version:     version,
 		redirectUrl: redirectUrl,
 		beta:        beta,
@@ -68,9 +70,28 @@ func (f *Facebook) GetAppAccessToken() (*AccessTokenApp, error) {
 
 //Generate an app secret proof to sign a request to Graph.
 //return string
-func (f *Facebook) GetSecretProof(accessToken string) string {
+func (f *Facebook) getSecretProof() string {
 	key := []byte(f.appSecret)
 	h := hmac.New(sha256.New, key)
-	h.Write([]byte(accessToken))
+	h.Write([]byte(f.accessToken))
 	return hex.EncodeToString(h.Sum(nil))
 }
+
+// func (f *Facebook) GetUserProfile() (interface{}, error) {
+// 	var betaApp string
+// 	if f.beta {
+// 		betaApp = "beta."
+// 	}
+// 	uri := GRAPH_BASE_URL + betaApp + "facebook.com/" + f.version + "/me?fields=id,name"
+//
+// 	response, err := client.Get(uri)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	defer response.Body.Close()
+//
+// 	if response.StatusCode != http.StatusOK {
+// 		return nil, errors.New("Error response")
+// 	}
+// }
