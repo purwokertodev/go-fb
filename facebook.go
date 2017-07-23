@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io"
 	"strings"
-	"time"
 )
 
 const (
@@ -23,11 +22,10 @@ type Facebook struct {
 	version     string
 	redirectUrl string
 	beta        bool
-	timeout     time.Duration
 	client      facebookClient
 }
 
-func NewFacebook(appId, appSecret, accessToken, version, redirectUrl string, beta bool, timeout time.Duration) *Facebook {
+func NewFacebook(appId, appSecret, accessToken, version, redirectUrl string, beta bool) *Facebook {
 	return &Facebook{
 		appId:       appId,
 		appSecret:   appSecret,
@@ -35,7 +33,6 @@ func NewFacebook(appId, appSecret, accessToken, version, redirectUrl string, bet
 		version:     version,
 		redirectUrl: redirectUrl,
 		beta:        beta,
-		timeout:     timeout,
 		client:      NewFacebookClient(),
 	}
 }
