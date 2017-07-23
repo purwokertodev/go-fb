@@ -4,9 +4,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"net/http"
+	"io"
+	"strings"
 	"time"
 )
 
@@ -24,9 +24,10 @@ type Facebook struct {
 	redirectUrl string
 	beta        bool
 	timeout     time.Duration
+	client      facebookClient
 }
 
-func NewFacebook(appId string, appSecret string, accessToken string, version string, redirectUrl string, beta bool, timeout time.Duration) *Facebook {
+func NewFacebook(appId, appSecret, accessToken, version, redirectUrl string, beta bool, timeout time.Duration) *Facebook {
 	return &Facebook{
 		appId:       appId,
 		appSecret:   appSecret,
@@ -35,36 +36,31 @@ func NewFacebook(appId string, appSecret string, accessToken string, version str
 		redirectUrl: redirectUrl,
 		beta:        beta,
 		timeout:     timeout,
+		client:      NewFacebookClient(),
 	}
+}
+
+func (f *Facebook) call(method, path string, body io.Reader, v interface{}) error {
+	if !strings.HasPrefix(path, "/") {
+		path = path + "/"
+	}
+	var betaApp string
+	if f.beta {
+		betaApp = "beta."
+	}
+	path = GRAPH_BASE_URL + betaApp + "facebook.com/" + f.version + path
+	return f.client.call(method, path, body, v)
 }
 
 //Generate Application Access Token
 //retun struct of AccessTokenApp
 func (f *Facebook) GetAppAccessToken() (*AccessTokenApp, error) {
-	client := &http.Client{}
 	var accessTokenApp *AccessTokenApp
-	var betaApp string
-	if f.beta {
-		betaApp = "beta."
-	}
-	uri := GRAPH_BASE_URL + betaApp + "facebook.com/" + f.version + "/oauth/access_token?client_id=" + f.appId + "&client_secret=" + f.appSecret + "&grant_type=client_credentials"
-
-	response, err := client.Get(uri)
+	path := "/oauth/access_token?client_id=" + f.appId + "&client_secret=" + f.appSecret + "&grant_type=client_credentials"
+	err := f.call("GET", path, nil, &accessTokenApp)
 	if err != nil {
 		return nil, err
 	}
-
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return nil, errors.New("Error response")
-	}
-
-	err = json.NewDecoder(response.Body).Decode(&accessTokenApp)
-	if err != nil {
-		return nil, errors.New("Error response")
-	}
-
 	return accessTokenApp, nil
 }
 
@@ -77,21 +73,20 @@ func (f *Facebook) getSecretProof() string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// func (f *Facebook) GetUserProfile() (interface{}, error) {
-// 	var betaApp string
-// 	if f.beta {
-// 		betaApp = "beta."
-// 	}
-// 	uri := GRAPH_BASE_URL + betaApp + "facebook.com/" + f.version + "/me?fields=id,name"
-//
-// 	response, err := client.Get(uri)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	defer response.Body.Close()
-//
-// 	if response.StatusCode != http.StatusOK {
-// 		return nil, errors.New("Error response")
-// 	}
-// }
+func (f *Facebook) GetUserProfile(scope string) (map[string]interface{}, error) {
+	var result interface{}
+	appSecretProof := f.getSecretProof()
+
+	path := "/me?fields=" + scope + "&access_token=" + f.accessToken + "&appsecret_proof=" + appSecretProof
+
+	err := f.call("GET", path, nil, &result)
+	if err != nil {
+		return nil, errors.New("Error response")
+	}
+	p, ok := result.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("Error response")
+	}
+
+	return p, nil
+}
