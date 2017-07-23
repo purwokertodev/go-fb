@@ -37,6 +37,10 @@ func NewFacebook(appId, appSecret, accessToken, version, redirectUrl string, bet
 	}
 }
 
+func (f *Facebook) SetAccessToken(newAccessToken string) {
+	f.accessToken = newAccessToken
+}
+
 func (f *Facebook) call(method, path string, body io.Reader, v interface{}) error {
 	if !strings.HasPrefix(path, "/") {
 		path = path + "/"
@@ -70,8 +74,8 @@ func (f *Facebook) getSecretProof() string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func (f *Facebook) GetUserProfile(scope string) (map[string]interface{}, error) {
-	var result interface{}
+func (f *Facebook) GetUserProfile(scope string) (*ProfileResponse, error) {
+	var result *ProfileResponse
 	appSecretProof := f.getSecretProof()
 
 	path := "/me?fields=" + scope + "&access_token=" + f.accessToken + "&appsecret_proof=" + appSecretProof
@@ -80,10 +84,6 @@ func (f *Facebook) GetUserProfile(scope string) (map[string]interface{}, error) 
 	if err != nil {
 		return nil, errors.New("Error response")
 	}
-	p, ok := result.(map[string]interface{})
-	if !ok {
-		return nil, errors.New("Error response")
-	}
 
-	return p, nil
+	return result, nil
 }
